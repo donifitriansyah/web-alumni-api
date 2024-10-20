@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use App\Http\Controllers\BaseController;
+use App\Models\Alumni;
 
 class AuthController extends BaseController
 {
@@ -25,32 +26,88 @@ class AuthController extends BaseController
         ]);
 
         if ($validator->fails()) {
-            return response()->json($validator->errors()->toJson(), 400);
+            return $this->sendError('Validation Error', $validator->errors()); // Menggunakan BaseController
         }
 
-        $user = User::create([
-            'name' => $request->get('name'),
-            'email' => $request->get('email'),
-            'password' => Hash::make($request->get('password')),
-            'role' => 'admin',
-        ]);
+        try {
+            $user = User::create([
+                'username' => $request->get('username'),
+                'email' => $request->get('email'),
+                'password' => Hash::make($request->get('password')),
+                'role' => 'admin',
+            ]);
 
-        $admin = Admin::create([
-            'id_user' => $user->id, // Simpan id_user
-            'nama' => $request->nama,
-            'nomor_induk' => $request->nomor_induk,
-            'no_hp' => $request->no_hp,
-        ]);
+            $admin = Admin::create([
+                'id_user' => $user->id,
+                'nama' => $request->nama,
+                'nomor_induk' => $request->nomor_induk,
+                'no_hp' => $request->no_hp,
+            ]);
 
-        $token = JWTAuth::fromUser($user);
+            $token = JWTAuth::fromUser($user);
 
-        return response()->json([
-            'message' => 'Admin registered successfully',
-            'user' => $user,  // Mengembalikan data user
-            'admin' => $admin, // Mengembalikan data admin
-            'token' => $token  // Mengembalikan token JWT
-        ], 201);
+            return response()->json([
+                'message' => 'Admin registered successfully',
+                'user' => $user,
+                'admin' => $admin,
+                'token' => $token
+            ], 201);
+        } catch (\Exception $e) {
+            return $this->sendError('Server Error', ['error' => $e->getMessage()]);
+        }
     }
+
+    public function registerAlumni(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'username' => 'required|string|max:255|unique:users',
+            'nim' => 'required|string|max:10|unique:alumni',
+            'nama_alumni' => 'required|string|max:255',
+            'tanggal_lahir' => 'required|date',
+            'alamat' => 'required|string|max:255',
+            'no_tlp' => 'required|string|max:15',
+            'email' => 'required|string|email|max:255|unique:users',
+            'password' => 'required|string|confirmed',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->sendError('Validation Error', $validator->errors()); // Menggunakan BaseController
+        }
+
+        try {
+            $user = User::create([
+                'username' => $request->get('username'),
+                'email' => $request->get('email'),
+                'password' => Hash::make($request->get('password')),
+                'role' => 'alumni',
+            ]);
+
+            $alumni = Alumni::create([
+                'id_user' => $user->id,
+                'nim' => $request->nim,
+                'nama_alumni' => $request->nama_alumni,
+                'tanggal_lahir' => $request->tanggal_lahir,
+                'alamat' => $request->alamat,
+                'no_tlp' => $request->no_tlp,
+                'status' => "pasif",
+                'email' => $request->email,
+            ]);
+
+            $token = JWTAuth::fromUser($user);
+
+            return response()->json([
+                'message' => 'Alumni registered successfully',
+                'user' => $user,
+                'alumni' => $alumni,
+                'token' => $token
+            ], 201);
+        } catch (\Exception $e) {
+            return $this->sendError('Server Error', ['error' => $e->getMessage()]);
+        }
+    }
+
+
+
 
     // Login
     public function login(Request $request)
