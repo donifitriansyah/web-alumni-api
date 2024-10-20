@@ -9,8 +9,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 use Tymon\JWTAuth\Facades\JWTAuth;
+use App\Http\Controllers\BaseController;
 
-class AuthController extends Controller
+class AuthController extends BaseController
 {
     public function registerAdmin(Request $request)
     {
@@ -62,9 +63,17 @@ class AuthController extends Controller
 
         $user = JWTAuth::user();
 
+        if ($user->role === 'admin') {
+            $additionalData = $user->admin; // Ambil data admin
+        } elseif ($user->role === 'alumni') {
+            $additionalData = $user->alumni; // Ambil data alumni
+        } elseif ($user->role === 'perusahaan') {
+            $additionalData = $user->perusahaan; // Ambil data perusahaan
+        }
+
         return response()->json([
             'message' => 'Login successful',
-            'user' => $user,  // Data user yang berhasil login
+            'user' => $user,
             'token' => $token // Token JWT
         ]);
     }
